@@ -1,6 +1,8 @@
 import pygame as pg
 import sand
 import uitools
+from button import Button
+from hourglass import hg
 
 green = (20, 220, 20)
 red = (220, 20, 20)
@@ -9,23 +11,11 @@ red = (220, 20, 20)
 def draw_grid(sandgrid: sand.SandScape, screenheight, screenwidth):
     for y, row in enumerate(sandgrid.grid):
         for x, col in enumerate(row):
-            colour = uitools.get_colour(col, sand_grid.can_move)
+            colour = uitools.get_colour(col, sandgrid.can_move)
 
             x_pos, y_pos = uitools.cell_to_screen(x, y, sandgrid.grid, screenwidth, screenheight)
             cell_size = uitools.get_cell_size(sandgrid.grid, screenheight, screenwidth)
             pg.draw.rect(screen, colour, (x_pos, y_pos, cell_size, cell_size))
-
-
-def draw_reset_button():
-    button_x, button_y, button_height, button_width = 90, 20, 50, 100
-    offset = 5
-    outline_colour = uitools.sand_colours['#']
-    inside_colour = uitools.sand_colours[' ']
-    pg.draw.rect(screen, outline_colour, (button_x, button_y, button_width, button_height))
-    pg.draw.rect(screen, inside_colour, (button_x + offset, button_y + offset, button_width - 2*offset, button_height - 2*offset))
-    font = pg.font.Font(None, 30)
-    text = font.render('Reset', True, uitools.sand_colours['#'])
-    screen.blit(text, (button_x + 0.23*button_width, button_y + 0.35*button_height))
 
 
 # ---------- Initialisation ---------- #
@@ -41,7 +31,10 @@ screen.fill((20, 20, 20))
 # ------------------------------------ #
 
 # ------------ Variables ------------- #
-sand_grid = sand.SandScape(sand.hourglass)
+sand_grid = sand.SandScape(hg)
+reset_button = Button(70, 20, 100, 50, "Reset", 5, 30)
+pause_button = Button(180, 20, 150, 50, "Pause/Play", 5, 30, text_mult=0.15)
+timer = 0
 # ------------------------------------ #
 
 # ------------ Debugging ------------- #
@@ -53,13 +46,20 @@ for y, row in enumerate(sand_grid.grid):
 # ------------------------------------ #
 
 while running:
-    clock.tick(4)
+    clock.tick(delta)
+    timer += 1
 
     # -------- Event Handling -------- #
+    m_x, m_y = pg.mouse.get_pos()
+
     for event in pg.event.get():
 
         if event.type == pg.QUIT:
             running = False
+        elif reset_button.check_over(m_x, m_y) and event.type == pg.MOUSEBUTTONDOWN:
+            sand_grid.set(hg)
+        elif pause_button.check_over(m_x, m_y) and event.type == pg.MOUSEBUTTONDOWN:
+            sand_grid.toggle_paused()
     # -------------------------------- #
 
     # ---------- Rendering ----------- #
@@ -68,10 +68,12 @@ while running:
     screen.blit(background, (0, 0))
 
     draw_grid(sand_grid, HEIGHT, WIDTH)
-    draw_reset_button()
+    reset_button.draw(pg, screen)
+    pause_button.draw(pg, screen)
 
     pg.display.flip()
     # -------------------------------- #
 
-    # sand_grid.draw_grid()
-    sand_grid.update()
+    if timer >= 25:
+        sand_grid.update()
+        timer = 0
